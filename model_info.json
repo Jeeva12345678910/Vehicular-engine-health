@@ -1,0 +1,14 @@
+{
+    "models": {
+      "engine_health_model": {
+        "name": "Engine Health Prediction Model",
+        "version": "1.0.0",
+        "status": "unavailable"
+      },
+      "chatbot_model": {
+        "name": "Chatbot Model",
+        "version": "1.0.0",
+        "status": "unavailable"
+      }
+    }
+  }

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nearby Workshops</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Avenir&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Arial Black', sans-serif;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    body {
+        color: white;
+        overflow-x: hidden;
+        background-color: black;
+    }
+
+    .video-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0);
+    }
+
+    .logo {
+        width: 150px;
+        filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, 0.5));
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .nav {
+        font-size: 18px;
+        position: absolute;
+        top: 1.65cm;
+        right: 0.5cm;
+    }
+
+    .nav a {
+        color: rgb(215, 10, 10);
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 5px;
+        transition: 0.3s;
+        margin-right: 15px;
+        cursor: pointer;
+    }
+
+    .nav a:hover {
+        text-decoration: underline;
+    }
+
+    .content-section {
+        padding: 50px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-size: 20px;
+        margin-top: 150px;
+    }
+
+    #map {
+        height: 300px;
+        margin: 20px auto;
+        max-width: 600px;
+    }
+
+    .workshop-list {
+        max-height: 200px;
+        overflow-y: auto;
+        margin: 20px auto;
+        max-width: 600px;
+    }
+
+    .workshop-item {
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+        border: 1px solid rgb(215, 10, 10);
+    }
+
+    .workshop-item h4 {
+        color: rgb(215, 10, 10);
+        margin-bottom: 5px;
+    }
+
+    .workshop-item p {
+        font-size: 14px;
+    }
+
+    .workshop-item button {
+        background-color: rgb(215, 10, 10);
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .workshop-item button:hover {
+        background-color: darkred;
+    }
+  </style>
+</head>
+<body>
+
+<video autoplay loop muted class="video-bg">
+  <source src="assets/carvideo.mp4" type="video/mp4" />
+  YOUR BROWSER DOES NOT SUPPORT THE VIDEO TAG.
+</video>
+
+<header class="header">
+  <img src="assets/edit1.png" alt="LOGO" class="logo" />
+  <div class="nav">
+    <a href="{{ url_for('home') }}#about">ABOUT</a>
+    {% if session['username'] %}
+      <a href="{{ url_for('logout') }}">LOGOUT</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">LOGIN</a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="content-section">
+  <h2>Nearby Workshops</h2>
+  <div id="map"></div>
+  <div id="workshopList" class="workshop-list"></div>
+</div>
+
+<script>
+  let map = null;
+
+  async function displayWorkshops() {
+    if (!navigator.geolocation) {
+      document.getElementById("workshopList").innerHTML = "<p>Geolocation is not supported by this browser.</p>";
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async function(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        if (map) map.remove();
+        map = L.map('map').setView([lat, lon], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        L.marker([lat, lon]).addTo(map).bindPopup("Your Location").openPopup();
+
+        const url = `{{ url_for('get_workshops') }}?lat=${lat}&lon=${lon}`;
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const workshops = await response.json();
+          const workshopList = document.getElementById("workshopList");
+          workshopList.innerHTML = "";
+          if (!Array.isArray(workshops) || workshops.length === 0) {
+            workshopList.innerHTML = "<p>No auto repair shops found nearby.</p>";
+            return;
+          }
+          workshops.forEach(workshop => {
+            L.marker([workshop.lat, workshop.lon]).addTo(map).bindPopup(workshop.name);
+            const workshopItem = document.createElement("div");
+            workshopItem.className = "workshop-item";
+            workshopItem.innerHTML = `
+              <h4>${workshop.name}</h4>
+              <p>Address: ${workshop.address}</p>
+              <button onclick="contactWorkshop('${workshop.name}')">Contact</button>
+            `;
+            workshopList.appendChild(workshopItem);
+          });
+        } catch (error) {
+          console.error("Error fetching workshops:", error);
+          document.getElementById("workshopList").innerHTML = "<p>Error loading workshops.</p>";
+        }
+      },
+      function(error) {
+        document.getElementById("workshopList").innerHTML = "<p>Please allow location access to view nearby workshops.</p>";
+      }
+    );
+  }
+
+  function contactWorkshop(name) {
+    alert(`Contacting ${name}`);
+  }
+
+  // Load workshops on page load
+  displayWorkshops();
+</script>
+</body>
+</html>

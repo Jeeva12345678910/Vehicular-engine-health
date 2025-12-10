@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine Health Gauge</title>
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; }
+        canvas { border: 1px solid #000; filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3)); }
+        #status { font-family: Arial, sans-serif; font-size: 24px; margin-top: 20px; text-align: center; }
+        #title { font-family: Arial, sans-serif; font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .delta { color: red; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div>
+        <div id="title">Engine Health Risk (%)</div>
+        <canvas id="gauge" width="400" height="250"></canvas>
+        <div id="status">Mild Risk (37.6%)</div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gauge');
+        const ctx = canvas.getContext('2d');
+        const probability = 0.375937819480896; // 37.59%
+        const maxAngle = Math.PI;
+        const startAngle = -Math.PI / 2;
+        const needleAngle = startAngle + probability * maxAngle;
+
+        function getRiskLevel(prob) {
+            if (prob <= 20) return "Low Risk";
+            if (prob <= 40) return "Mild Risk";
+            if (prob <= 60) return "Moderate Risk";
+            return "High Risk";
+        }
+
+        function drawGauge() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw gauge background with gradient
+            const bgGradient = ctx.createRadialGradient(200, 200, 50, 200, 200, 150);
+            bgGradient.addColorStop(0, '#fff');
+            bgGradient.addColorStop(1, '#e0e0e0');
+            ctx.beginPath();
+            ctx.arc(200, 200, 150, startAngle, startAngle + maxAngle);
+            ctx.lineWidth = 40;
+            ctx.strokeStyle = bgGradient;
+            ctx.stroke();
+
+            // Draw color-coded sections
+            // Green (0-20%)
+            ctx.beginPath();
+            ctx.arc(200, 200, 150, startAngle, startAngle + 0.2 * maxAngle);
+            ctx.lineWidth = 30;
+            ctx.strokeStyle = 'green';
+            ctx.stroke();
+
+            // Yellow (20-40%)
+            ctx.beginPath();
+            ctx.arc(200, 200, 150, startAngle + 0.2 * maxAngle, startAngle + 0.4 * maxAngle);
+            ctx.lineWidth = 30;
+            ctx.strokeStyle = 'yellow';
+            ctx.stroke();
+
+            // Orange (40-60%)
+            ctx.beginPath();
+            ctx.arc(200, 200, 150, startAngle + 0.4 * maxAngle, startAngle + 0.6 * maxAngle);
+            ctx.lineWidth = 30;
+            ctx.strokeStyle = 'orange';
+            ctx.stroke();
+
+            // Red (60-100%)
+            ctx.beginPath();
+            ctx.arc(200, 200, 150, startAngle + 0.6 * maxAngle, startAngle + maxAngle);
+            ctx.lineWidth = 30;
+            ctx.strokeStyle = 'red';
+            ctx.stroke();
+
+            // Draw needle
+            ctx.beginPath();
+            ctx.moveTo(200, 200);
+            ctx.lineTo(200 + 140 * Math.cos(needleAngle), 200 + 140 * Math.sin(needleAngle));
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = 'black';
+            ctx.stroke();
+
+            // Draw center
+            ctx.beginPath();
+            ctx.arc(200, 200, 15, 0, 2 * Math.PI);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+
+            // Draw percentage labels
+            ctx.font = '16px Arial';
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.fillText('0', 50, 190);
+            ctx.fillText('20', 100, 110);
+            ctx.fillText('40', 160, 60);
+            ctx.fillText('60', 240, 60);
+            ctx.fillText('80', 300, 110);
+            ctx.fillText('100', 350, 190);
+
+            // Draw central percentage display
+            ctx.font = 'bold 40px Arial';
+            ctx.fillStyle = 'black';
+            ctx.fillText((probability * 100).toFixed(1), 200, 170);
+            ctx.font = '20px Arial';
+            ctx.fillStyle = 'red';
+            ctx.fillText('+9.3%', 200, 200);
+        }
+
+        // Update status text
+        document.getElementById('status').textContent = `${getRiskLevel(probability * 100)} (${(probability * 100).toFixed(1)}%)`;
+
+        drawGauge();
+    </script>
+</body>
+</html>

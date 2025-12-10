@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine Health Speedometer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        canvas { max-width: 400px; margin: 20px auto; }
+        .condition { font-size: 24px; font-weight: bold; margin: 20px; }
+        .score { font-size: 18px; color: #555; }
+        .label { font-size: 16px; position: absolute; }
+        #goodLabel { left: 20%; bottom: 10%; color: green; }
+        #badLabel { right: 20%; bottom: 10%; color: red; }
+    </style>
+</head>
+<body>
+    <h1>Engine Health Indicator</h1>
+    <div class="condition">Engine Condition: Good</div>
+    <div class="score">Health Score: 43.70/100</div>
+    <canvas id="speedometer"></canvas>
+    <div id="goodLabel" class="label">Good</div>
+    <div id="badLabel" class="label">Bad</div>
+    <script>
+        const ctx = document.getElementById('speedometer').getContext('2d');
+        const gaugeValue = 43.702919006347656;
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [gaugeValue, 100 - gaugeValue],
+                    backgroundColor: [
+                        gaugeValue <= 50 ? '#28a745' : '#dc3545',
+                        '#e0e0e0'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                circumference: 180,
+                rotation: -90,
+                cutout: '80%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                animation: { animateRotate: true, animateScale: true }
+            }
+        });
+        // Add needle
+        ctx.beginPath();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 4;
+        const angle = (gaugeValue / 100) * Math.PI - Math.PI / 2;
+        const centerX = ctx.canvas.width / 2;
+        const centerY = ctx.canvas.height / 2;
+        const radius = ctx.canvas.width / 2.5;
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
+        ctx.stroke();
+    </script>
+</body>
+</html>
+    

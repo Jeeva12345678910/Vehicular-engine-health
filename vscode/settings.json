@@ -1,0 +1,9 @@
+{
+    "python.pythonPath": "venv/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "editor.formatOnSave": true,
+    "files.associations": {
+        "*.html": "html"
+    }
+}

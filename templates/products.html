@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shop Products</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Avenir&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Arial Black', sans-serif;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    body {
+        color: white;
+        overflow-x: hidden;
+        background-color: black;
+    }
+
+    .video-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0);
+    }
+
+    .logo {
+        width: 150px;
+        filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, 0.5));
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .nav {
+        font-size: 18px;
+        position: absolute;
+        top: 1.65cm;
+        right: 0.5cm;
+    }
+
+    .nav a {
+        color: rgb(215, 10, 10);
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 5px;
+        transition: 0.3s;
+        margin-right: 15px;
+        cursor: pointer;
+    }
+
+    .nav a:hover {
+        text-decoration: underline;
+    }
+
+    .content-section {
+        padding: 50px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-size: 20px;
+        margin-top: 150px;
+    }
+
+    .form-container {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        color: black;
+        max-width: 600px;
+        margin: 20px auto;
+    }
+
+    .form-container h2 {
+        margin-bottom: 20px;
+    }
+
+    .form-container select {
+        display: block;
+        width: 80%;
+        margin: 10px auto;
+        padding: 8px;
+    }
+
+    .form-container button {
+        background-color: rgb(215, 10, 10);
+        color: white;
+        padding: 10px;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    .form-container button:hover {
+        background-color: darkred;
+    }
+  </style>
+</head>
+<body>
+
+<video autoplay loop muted class="video-bg">
+  <source src="static/assets/carvideo.mp4" type="video/mp4" />
+  YOUR BROWSER DOES NOT SUPPORT THE VIDEO TAG.
+</video>
+
+<header class="header">
+  <img src="assets/edit1.png" alt="LOGO" class="logo" />
+  <div class="nav">
+    <a href="{{ url_for('home') }}#about">ABOUT</a>
+    {% if session['username'] %}
+      <a href="{{ url_for('logout') }}">LOGOUT</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">LOGIN</a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="content-section">
+  <h2>Search Products</h2>
+  <div class="form-container">
+    <h2>Search Products</h2>
+    <select id="productSearchTerm">
+      <option value="">Select a product category</option>
+    </select>
+    <button onclick="submitProductSearch()">Search</button>
+  </div>
+</div>
+
+<script>
+  async function loadProducts() {
+    try {
+      const response = await fetch('{{ url_for("get_products") }}');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      const data = await response.json();
+      const select = document.getElementById("productSearchTerm");
+      select.innerHTML = '<option value="">Select a product category</option>';
+      data.search_terms.forEach(term => {
+        const option = document.createElement("option");
+        option.value = term;
+        option.textContent = term;
+        select.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to load products. Please try again.');
+    }
+  }
+
+  function submitProductSearch() {
+    const searchTerm = document.getElementById("productSearchTerm").value;
+    if (searchTerm) {
+      const googleSearchUrl = `https://www.google.com/search?q=site:ebay.com+${encodeURIComponent(searchTerm)}`;
+      window.location.href = googleSearchUrl;
+    } else {
+      alert("Please select a product category.");
+    }
+  }
+
+  // Load products on page load
+  loadProducts();
+</script>
+</body>
+</html>

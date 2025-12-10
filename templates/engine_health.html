@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Engine Health Checker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Avenir&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Arial Black', sans-serif;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    body {
+        color: white;
+        overflow-x: hidden;
+        background-color: black;
+    }
+
+    .video-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0);
+    }
+
+    .logo {
+        width: 150px;
+        filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, 0.5));
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .nav {
+        font-size: 18px;
+        position: absolute;
+        top: 1.65cm;
+        right: 0.5cm;
+    }
+
+    .nav a {
+        color: rgb(215, 10, 10);
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 5px;
+        transition: 0.3s;
+        margin-right: 15px;
+        cursor: pointer;
+    }
+
+    .nav a:hover {
+        text-decoration: underline;
+    }
+
+    .content-section {
+        padding: 50px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-size: 20px;
+        margin-top: 150px;
+    }
+
+    .form-container {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        color: black;
+        max-width: 600px;
+        margin: 20px auto;
+    }
+
+    .form-container h2 {
+        margin-bottom: 20px;
+    }
+
+    .form-container input {
+        display: block;
+        width: 80%;
+        margin: 10px auto;
+        padding: 8px;
+    }
+
+    .form-container button {
+        background-color: rgb(215, 10, 10);
+        color: white;
+        padding: 10px;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    .form-container button:hover {
+        background-color: darkred;
+    }
+
+    .result-container {
+        display: none;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        color: black;
+        max-width: 1200px;
+        margin: 20px auto;
+    }
+
+    .result-container canvas {
+        max-width: 400px;
+        margin: 20px auto;
+    }
+
+    .result-container .condition {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 20px;
+    }
+
+    .result-container .score {
+        font-size: 18px;
+        color: #555;
+    }
+
+    .visualizations {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .chart {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    #gauge, #parameterChart {
+        height: 400px;
+        width: 100%;
+    }
+
+    .parameter-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+        color: black;
+    }
+
+    .parameter-table th, .parameter-table td {
+        padding: 12px;
+        border: 1px solid #ddd;
+        text-align: left;
+    }
+
+    .parameter-table th {
+        background-color: #f5f5f5;
+    }
+
+    .significance-high { color: red; font-weight: bold; }
+    .significance-medium { color: orange; font-weight: bold; }
+    .significance-low { color: green; font-weight: bold; }
+
+    #downloadBtn {
+        display: none;
+        padding: 10px;
+        background-color: rgb(215, 10, 10);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+
+<video autoplay loop muted class="video-bg">
+  <source src="{{ url_for('static', filename='assets/carvideo.mp4') }}" type="video/mp4" />
+  YOUR BROWSER DOES NOT SUPPORT THE VIDEO TAG.
+</video>
+
+<header class="header">
+  <img src="assets/edit1.png" alt="LOGO" class="logo" />
+  <div class="nav">
+    <a href="{{ url_for('home') }}#about">ABOUT</a>
+    {% if session['username'] %}
+      <a href="{{ url_for('logout') }}">LOGOUT</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">LOGIN</a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="content-section">
+  <h2>Check Engine Health</h2>
+  <div class="form-container">
+    <h2>Enter Engine Parameters</h2>
+    <input type="number" step="0.1" id="lubOilPressure" placeholder="Lub oil pressure (bar)" min="0">
+    <input type="number" step="0.1" id="fuelPressure" placeholder="Fuel pressure (bar)" min="0">
+    <input type="number" step="0.1" id="coolantPressure" placeholder="Coolant pressure (bar)" min="0">
+    <input type="number" step="0.1" id="lubOilTemp" placeholder="lub oil temp (°C)" min="0">
+    <input type="number" step="0.1" id="coolantTemp" placeholder="Coolant temp (°C)" min="0">
+    <button onclick="submitHealthCheck()">Submit</button>
+  </div>
+
+  <div id="resultContainer" class="result-container">
+    <h2>Engine Health Analysis</h2>
+    <div id="condition" class="condition"></div>
+    <div id="score" class="score"></div>
+    <canvas id="speedometer"></canvas>
+    
+    <div class="visualizations">
+      <div class="chart">
+        <div id="gauge"></div>
+      </div>
+      <div class="chart">
+        <div id="parameterChart"></div>
+      </div>
+    </div>
+
+    <h3 style="color: black; margin-top: 20px;">Parameter Analysis</h3>
+    <table class="parameter-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Current Value</th>
+          <th>Mean Value</th>
+          <th>Deviation</th>
+          <th>Significance</th>
+        </tr>
+      </thead>
+      <tbody id="parameterTableBody"></tbody>
+    </table>
+  </div>
+
+  <button id="downloadBtn" onclick="downloadPDF()">Download Report PDF</button>
+</div>
+
+<script>
+  let currentUser = { name: "{{ session['username'] or '' }}" };
+
+  // Initialize all functions before they are used
+  function displaySpeedometer(result) {
+    const ctx = document.getElementById('speedometer').getContext('2d');
+    if (ctx.chart) {
+      ctx.chart.destroy();
+    }
+    
+    ctx.chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [result.confidence, 100 - result.confidence],
+          backgroundColor: [
+            result.confidence <= 50 ? '#28a745' : '#dc3545',
+            '#e0e0e0'
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        circumference: 180,
+        rotation: -90,
+        cutout: '80%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        animation: { animateRotate: true, animateScale: true }
+      }
+    });
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 4;
+    const angle = (result.confidence / 100) * Math.PI - Math.PI / 2;
+    const centerX = ctx.canvas.width / 2;
+    const centerY = ctx.canvas.height / 2;
+    const radius = ctx.canvas.width / 2.5;
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
+    ctx.stroke();
+  }
+
+  async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const engine = currentUser.engineData;
+
+    doc.setFontSize(16);
+    doc.text("Engine Health Report", 20, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 30);
+    doc.text(`Status: ${engine.status}`, 20, 40);
+    doc.text(`Confidence: ${engine.confidence.toFixed(2)}%`, 20, 50);
+    doc.text(`Risk Level: ${engine.risk_level}`, 20, 60);
+    
+    doc.text("Parameter Analysis:", 20, 75);
+    let y = 85;
+    engine.deviations.forEach(dev => {
+      doc.text(`${dev.parameter}:`, 25, y);
+      doc.text(`Value: ${dev.value.toFixed(2)}`, 35, y + 5);
+      doc.text(`Mean: ${dev.mean.toFixed(2)}`, 35, y + 10);
+      doc.text(`Significance: ${dev.significance}`, 35, y + 15);
+      y += 25;
+    });
+
+    doc.save("engine_health_report.pdf");
+  }
+
+  async function submitHealthCheck() {
+    try {
+      // Get and validate input values
+      const parameters = {
+        "Lub oil pressure": parseFloat(document.getElementById("lubOilPressure").value),
+        "Fuel pressure": parseFloat(document.getElementById("fuelPressure").value),
+        "Coolant pressure": parseFloat(document.getElementById("coolantPressure").value),
+        "lub oil temp": parseFloat(document.getElementById("lubOilTemp").value),
+        "Coolant temp": parseFloat(document.getElementById("coolantTemp").value)
+      };
+
+      // Validate input values
+      for (const [key, value] of Object.entries(parameters)) {
+        if (isNaN(value) || value < 0) {
+          alert(`Invalid value for ${key}. Please enter a positive number.`);
+          return;
+        }
+      }
+
+      const response = await fetch('/predict-engine-health', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parameters)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      currentUser.engineData = { ...parameters, ...result };
+      
+      // Show results container and download button
+      document.getElementById("resultContainer").style.display = "block";
+      document.getElementById("downloadBtn").style.display = "block";
+      
+      // Update basic information
+      document.getElementById('condition').textContent = `Status: ${result.status}`;
+      document.getElementById('condition').className = `condition ${result.status.toLowerCase()}`;
+      document.getElementById('score').textContent = `Confidence: ${result.confidence.toFixed(2)}%`;
+      
+      // Create speedometer gauge
+      displaySpeedometer(result);
+      
+      // Create health risk gauge
+      const gaugeData = {
+        domain: { x: [0, 1], y: [0, 1] },
+        value: result.confidence,
+        title: { text: "Engine Health Risk", font: { size: 24 } },
+        type: "indicator",
+        mode: "gauge+number",
+        gauge: {
+          axis: { range: [0, 100] },
+          bar: { color: result.status === 'Healthy' ? "green" : "red" },
+          steps: [
+            { range: [0, 33], color: "lightgreen" },
+            { range: [33, 66], color: "orange" },
+            { range: [66, 100], color: "red" }
+          ]
+        }
+      };
+      Plotly.newPlot('gauge', [gaugeData]);
+
+      // Create parameter comparison chart
+      const parameterNames = result.deviations.map(d => d.parameter);
+      const currentValues = result.deviations.map(d => d.value);
+      const meanValues = result.deviations.map(d => d.mean);
+
+      const trace1 = {
+        x: parameterNames,
+        y: currentValues,
+        name: 'Current Values',
+        type: 'bar'
+      };
+
+      const trace2 = {
+        x: parameterNames,
+        y: meanValues,
+        name: 'Mean Values',
+        type: 'bar'
+      };
+
+      const layout = {
+        title: { text: 'Parameter Comparison', font: { size: 24 } },
+        barmode: 'group',
+        font: { size: 14 }
+      };
+
+      Plotly.newPlot('parameterChart', [trace1, trace2], layout);
+
+      // Update parameter table
+      const tableBody = document.getElementById('parameterTableBody');
+      tableBody.innerHTML = '';
+      result.deviations.forEach(dev => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = dev.parameter;
+        row.insertCell(1).textContent = dev.value.toFixed(2);
+        row.insertCell(2).textContent = dev.mean.toFixed(2);
+        row.insertCell(3).textContent = dev.deviation.toFixed(2);
+        const significanceCell = row.insertCell(4);
+        significanceCell.textContent = dev.significance;
+        significanceCell.className = `significance-${dev.significance.toLowerCase()}`;
+      });
+
+    } catch (error) {
+      console.error("Error predicting engine health:", error);
+      alert(`Failed to predict engine health: ${error.message}`);
+    }
+  }
+</script>
+</body>
+</html>
